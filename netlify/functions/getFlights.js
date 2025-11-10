@@ -1,7 +1,4 @@
 import fetch from "node-fetch";
-import dotenv from "dotenv";
-
-dotenv.config(); 
 
 export const handler = async (event) => {
   try {
@@ -14,7 +11,6 @@ export const handler = async (event) => {
       };
     }
 
-  
     const clientId = process.env.AMADEUS_API_KEY;
     const clientSecret = process.env.AMADEUS_API_SECRET;
 
@@ -25,7 +21,7 @@ export const handler = async (event) => {
       };
     }
 
-    
+    // 🔐 Get OAuth token
     const tokenRes = await fetch("https://test.api.amadeus.com/v1/security/oauth2/token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -40,7 +36,7 @@ export const handler = async (event) => {
     const accessToken = tokenData.access_token;
     if (!accessToken) throw new Error("Failed to get Amadeus access token");
 
-  
+    // ✈️ Fetch flights
     const url = `https://test.api.amadeus.com/v2/shopping/flight-offers?originLocationCode=${from}&destinationLocationCode=${to}&departureDate=${date}&adults=1&currencyCode=GBP&max=10`;
 
     const flightRes = await fetch(url, {
@@ -50,7 +46,6 @@ export const handler = async (event) => {
     const data = await flightRes.json();
     const offers = data?.data || [];
 
-    
     const airlineNames = {
       EY: "Etihad Airways",
       EK: "Emirates",
@@ -62,18 +57,15 @@ export const handler = async (event) => {
       GF: "Gulf Air",
       LH: "Lufthansa",
       KL: "KLM Royal Dutch Airlines",
-      QR: "Qatar Airways",
       AI: "Air India",
       SQ: "Singapore Airlines",
       CX: "Cathay Pacific",
       VS: "Virgin Atlantic",
       WY: "Oman Air",
       KU: "Kuwait Airways",
-      QR: "Qatar Airways",
       UX: "Air Europa",
     };
 
-    
     const formatTime = (iso) => {
       if (!iso) return "--:--";
       const d = new Date(iso);
@@ -85,7 +77,6 @@ export const handler = async (event) => {
       });
     };
 
-    
     const flights = offers.map((offer) => {
       const itinerary = offer.itineraries?.[0];
       const segments = itinerary?.segments || [];

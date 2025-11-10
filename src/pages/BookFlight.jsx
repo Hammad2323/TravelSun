@@ -39,8 +39,8 @@ export default function BookFlight() {
 
     try {
       await emailjs.send(
-        "service_rqcyjzf",
-        "template_l72a947",
+        "service_sypybsn",
+        "template_2ct7z4k",
         {
           from_name: formData.fullName,
           contact_number: formData.contact,
@@ -52,7 +52,7 @@ export default function BookFlight() {
           duration: flight.duration,
           price: `£${flight.price}`,
         },
-        "_SyqWxXqF8NFqTYFE"
+        "_D--vHi3PuyyjzodL"
       );
 
       window.open(

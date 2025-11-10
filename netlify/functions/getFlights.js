@@ -1,8 +1,7 @@
-// netlify/functions/getFlights.js
 import fetch from "node-fetch";
 import dotenv from "dotenv";
 
-dotenv.config(); // ✅ Loads .env file locally
+dotenv.config(); 
 
 export const handler = async (event) => {
   try {
@@ -15,7 +14,7 @@ export const handler = async (event) => {
       };
     }
 
-    // === Load Amadeus credentials ===
+  
     const clientId = process.env.AMADEUS_API_KEY;
     const clientSecret = process.env.AMADEUS_API_SECRET;
 
@@ -26,7 +25,7 @@ export const handler = async (event) => {
       };
     }
 
-    // === Step 1: Get Access Token ===
+    
     const tokenRes = await fetch("https://test.api.amadeus.com/v1/security/oauth2/token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -41,7 +40,7 @@ export const handler = async (event) => {
     const accessToken = tokenData.access_token;
     if (!accessToken) throw new Error("Failed to get Amadeus access token");
 
-    // === Step 2: Fetch flight data ===
+  
     const url = `https://test.api.amadeus.com/v2/shopping/flight-offers?originLocationCode=${from}&destinationLocationCode=${to}&departureDate=${date}&adults=1&currencyCode=GBP&max=10`;
 
     const flightRes = await fetch(url, {
@@ -51,7 +50,7 @@ export const handler = async (event) => {
     const data = await flightRes.json();
     const offers = data?.data || [];
 
-    // === Airline names mapping ===
+    
     const airlineNames = {
       EY: "Etihad Airways",
       EK: "Emirates",
@@ -74,7 +73,7 @@ export const handler = async (event) => {
       UX: "Air Europa",
     };
 
-    // === Helper for time formatting ===
+    
     const formatTime = (iso) => {
       if (!iso) return "--:--";
       const d = new Date(iso);
@@ -86,7 +85,7 @@ export const handler = async (event) => {
       });
     };
 
-    // === Format all flights ===
+    
     const flights = offers.map((offer) => {
       const itinerary = offer.itineraries?.[0];
       const segments = itinerary?.segments || [];

@@ -67,14 +67,73 @@ export default function BookFlight() {
     }
   };
 
-  const handleDownload = () => {
+  
+  const handleDownload = async () => {
     const element = document.getElementById("booking-summary");
-    html2canvas(element).then((canvas) => {
-      const link = document.createElement("a");
-      link.download = "flight-booking-summary.jpg";
-      link.href = canvas.toDataURL("image/jpeg");
-      link.click();
-    });
+    if (!element) return alert("Booking summary not found!");
+
+    try {
+      
+      const clone = element.cloneNode(true);
+      clone.style.position = "absolute";
+      clone.style.left = "-9999px";
+      clone.style.top = "0";
+      clone.style.background = "#ffffff";
+      clone.style.filter = "none";
+      clone.style.backdropFilter = "none";
+      document.body.appendChild(clone);
+
+    
+      const fixColors = (el) => {
+        const computed = window.getComputedStyle(el);
+        const cssProps = [
+          "color",
+          "backgroundColor",
+          "borderColor",
+          "outlineColor",
+          "boxShadow",
+        ];
+        cssProps.forEach((prop) => {
+          const val = computed[prop];
+          if (val && (val.includes("oklab(") || val.includes("oklch("))) {
+            el.style[prop] = val.includes("oklch")
+              ? val.replace(/oklch\([^)]+\)/g, "rgb(0,0,0)")
+              : val.replace(/oklab\([^)]+\)/g, "rgb(0,0,0)");
+          }
+        });
+      };
+
+      clone.querySelectorAll("*").forEach(fixColors);
+      fixColors(clone);
+
+      
+      await new Promise((r) => setTimeout(r, 150));
+
+      const canvas = await html2canvas(clone, {
+        useCORS: true,
+        backgroundColor: "#ffffff",
+        scale: 2,
+        logging: false,
+        allowTaint: true,
+      });
+
+      document.body.removeChild(clone);
+
+      
+      canvas.toBlob((blob) => {
+        if (!blob) return alert("Failed to create image!");
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = "flight-booking-summary.jpg";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(link.href);
+      }, "image/jpeg", 1.0);
+    } catch (error) {
+      console.error("Error downloading JPG:", error);
+      alert("Failed to download image. Please try again.");
+    }
   };
 
   if (submitted) {
@@ -90,7 +149,7 @@ export default function BookFlight() {
             Booking Request Sent Successfully!
           </h2>
           <p className="text-gray-600 mb-6">
-            Thank you, {formData.fullName}. We’ll contact you soon to confirm your booking.
+            Thank you. We’ll contact you soon to confirm your booking.
           </p>
 
           <div
@@ -135,7 +194,6 @@ export default function BookFlight() {
           Complete Your Booking
         </h2>
 
-      
         <div className="bg-white/70 border border-[#0a1f44]/30 rounded-2xl p-6 mb-10 shadow-inner">
           <h3 className="text-lg font-semibold text-[#0a1f44] mb-4 border-b border-gray-200 pb-2">
             Flight Summary
@@ -177,7 +235,6 @@ export default function BookFlight() {
           </div>
         </div>
 
-    
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">

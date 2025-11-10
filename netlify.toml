@@ -4,3 +4,8 @@
 
 [functions]
   directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+[functions.getFlights]
+  node_bundler = "esbuild"
+  included_files = ["netlify/functions/getFlights.js"]

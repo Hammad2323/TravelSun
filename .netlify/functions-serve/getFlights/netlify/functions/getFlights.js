@@ -6405,13 +6405,17 @@ var handler = async (event) => {
     });
     const tokenData = await tokenRes.json();
     const accessToken = tokenData.access_token;
-    if (!accessToken) throw new Error("Failed to get Amadeus access token");
+    if (!accessToken) {
+      throw new Error("Failed to get Amadeus access token");
+    }
     const url = `https://test.api.amadeus.com/v2/shopping/flight-offers?originLocationCode=${from}&destinationLocationCode=${to}&departureDate=${date}&adults=1&currencyCode=GBP&max=10`;
     const flightRes = await fetch(url, {
       headers: { Authorization: `Bearer ${accessToken}` }
     });
     const data = await flightRes.json();
-    const offers = data?.data || [];
+    if (!data || !data.data) {
+      throw new Error("No flight data received");
+    }
     const airlineNames = {
       EY: "Etihad Airways",
       EK: "Emirates",
@@ -6441,47 +6445,35 @@ var handler = async (event) => {
         hour12: false
       });
     };
-    const flights = offers.map((offer) => {
+    const flights = data.data.map((offer) => {
       const itinerary = offer.itineraries?.[0];
       const segments = itinerary?.segments || [];
       const firstSeg = segments[0];
       const lastSeg = segments[segments.length - 1];
       const airlineCode = firstSeg?.carrierCode || "??";
       const airline = `${airlineNames[airlineCode] || "Unknown Airline"} (${airlineCode})`;
-      const fromCode = firstSeg?.departure?.iataCode || from;
-      const toCode = lastSeg?.arrival?.iataCode || to;
       const departureTime = formatTime(firstSeg?.departure?.at);
       const arrivalTime = formatTime(lastSeg?.arrival?.at);
-      const duration = itinerary?.duration?.replace("PT", "").toLowerCase() || "N/A";
-      const stops = segments.length > 1 ? `${segments.length - 1} stop${segments.length > 2 ? "s" : ""}` : "Direct";
-      const price = offer?.price?.grandTotal || "N/A";
       return {
         airline,
-        from: fromCode,
-        to: toCode,
+        from: firstSeg?.departure?.iataCode || from,
+        to: lastSeg?.arrival?.iataCode || to,
         departureTime,
         arrivalTime,
-        duration,
-        stops,
-        price: `\xA3${price}`
+        duration: itinerary?.duration?.replace("PT", "").toLowerCase() || "N/A",
+        stops: segments.length > 1 ? `${segments.length - 1} stop(s)` : "Direct",
+        price: `\xA3${offer?.price?.grandTotal || "N/A"}`
       };
     });
     return {
       statusCode: 200,
-      body: JSON.stringify({
-        success: true,
-        count: flights.length,
-        flights
-      })
+      body: JSON.stringify({ success: true, count: flights.length, flights })
     };
   } catch (error) {
-    console.error("\u{1F525} Error fetching flights:", error);
+    console.error("\u274C getFlights function error:", error.message);
     return {
       statusCode: 500,
-      body: JSON.stringify({
-        error: "Internal server error",
-        details: error.message
-      })
+      body: JSON.stringify({ error: "Internal server error", details: error.message })
     };
   }
 };

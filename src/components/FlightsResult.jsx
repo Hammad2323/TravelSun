@@ -1,9 +1,10 @@
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { Plane, Clock, ArrowRight, Wallet, Search } from "lucide-react";
+import { Plane, Clock, ArrowRight, Wallet, Search, RefreshCw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-const airlineNames = {   EK: "Emirates",
+const airlineNames = {   
+  EK: "Emirates",
   QR: "Qatar Airways",
   EY: "Etihad Airways",
   TK: "Turkish Airlines",
@@ -87,8 +88,11 @@ const airlineNames = {   EK: "Emirates",
   AS: "Alaska Airlines",
   F9: "Frontier Airlines",
   SY: "Sun Country",
-  HA: "Hawaiian Airlines", };
-const airports = { ISB: { name: "Islamabad International Airport", flag: "🇵🇰" },
+  HA: "Hawaiian Airlines", 
+};
+
+const airports = { 
+  ISB: { name: "Islamabad International Airport", flag: "🇵🇰" },
   LHE: { name: "Lahore Allama Iqbal Intl Airport", flag: "🇵🇰" },
   KHI: { name: "Karachi Jinnah Intl Airport", flag: "🇵🇰" },
   PEW: { name: "Peshawar Bacha Khan Intl Airport", flag: "🇵🇰" },
@@ -138,17 +142,9 @@ const airports = { ISB: { name: "Islamabad International Airport", flag: "🇵�
   PVG: { name: "Shanghai Pudong Intl Airport", flag: "🇨🇳" },
   CAN: { name: "Guangzhou Baiyun Intl Airport", flag: "🇨🇳" },
   CTU: { name: "Chengdu Shuangliu Intl Airport", flag: "🇨🇳" },
-  HKG: { name: "Hong Kong Intl Airport", flag: "🇭🇰" }};
-
-const normalizeAirline = (airline) => {
-  if (!airline) return "Unknown Airline";
-  const match = airline.match(/\(([A-Z0-9]{2})\)/);
-  if (match && airlineNames[match[1]]) {
-    return `${airlineNames[match[1]]} (${match[1]})`;
-  }
-  const code = airline.slice(-3, -1).toUpperCase();
-  return airlineNames[code] ? `${airlineNames[code]} (${code})` : airline;
+  HKG: { name: "Hong Kong Intl Airport", flag: "🇭🇰" }
 };
+
 const getAirport = (code) => airports[code] || { name: code, flag: "🏳️" };
 
 export default function FlightsResult({ flights, loading, searchMade }) {
@@ -182,7 +178,6 @@ export default function FlightsResult({ flights, loading, searchMade }) {
 
   return (
     <div className="max-w-6xl mx-auto mt-10 px-4 space-y-8">
-  
       <div className="flex justify-center">
         <div className="relative w-full sm:w-96">
           <Search className="absolute left-4 top-3 w-5 h-5 text-gray-500" />
@@ -196,12 +191,10 @@ export default function FlightsResult({ flights, loading, searchMade }) {
         </div>
       </div>
 
-      
       <div className="grid grid-cols-1 gap-8">
         {displayedFlights.map((f, i) => {
           const from = getAirport(f.from);
           const to = getAirport(f.to);
-          const airlineName = normalizeAirline(f.airline);
 
           return (
             <motion.div
@@ -217,17 +210,20 @@ export default function FlightsResult({ flights, loading, searchMade }) {
                 flex flex-col sm:flex-row justify-between items-center gap-6 overflow-hidden
               "
             >
-              
               <div className="text-center sm:text-left sm:w-1/3">
                 <h3 className="text-lg sm:text-xl font-semibold text-[#0a2540] tracking-tight">
-                  {airlineName}
+                  {f.airline.split("+").map((a, idx) => (
+                    <span key={idx}>
+                      {a.trim()}
+                      {idx < f.airline.split("+").length - 1 && " + "}
+                    </span>
+                  ))}
                 </h3>
                 <p className="text-sm text-gray-600 mt-1 leading-relaxed">
                   {from.flag} {from.name} ({f.from}) → {to.flag} {to.name} ({f.to})
                 </p>
               </div>
 
-              
               <div className="flex flex-col items-center text-gray-700 text-sm sm:w-1/3">
                 <div className="flex items-center gap-2 font-medium text-[#0a2540]">
                   <Clock className="w-4 h-4 text-[#1f3b73]" />
@@ -238,9 +234,38 @@ export default function FlightsResult({ flights, loading, searchMade }) {
                 <p className="text-xs text-gray-500 mt-1">
                   Duration: {f.duration || "N/A"} • {f.stops || "Direct"}
                 </p>
+
+                {f.returnDepartureTime && (
+                  <div className="mt-4 text-center sm:text-left border-t border-gray-200 pt-3">
+                    <div className="flex items-center justify-center gap-2 text-[#0a2540] font-medium">
+                      <RefreshCw className="w-4 h-4 text-[#1f3b73]" />
+                      {f.to} → {f.from}
+                    </div>
+
+                    {f.returnAirline && (
+                      <p className="text-xs text-gray-500 mt-1 font-semibold">
+                        Airlines: {f.returnAirline.split("+").map((a, idx) => (
+                          <span key={idx}>
+                            {a.trim()}
+                            {idx < f.returnAirline.split("+").length - 1 && " + "}
+                          </span>
+                        ))}
+                      </p>
+                    )}
+
+                    <div className="flex items-center gap-2 text-sm text-gray-700 mt-1">
+                      <Clock className="w-4 h-4 text-[#1f3b73]" />
+                      {f.returnDepartureTime}
+                      <ArrowRight className="w-4 h-4 mx-1 text-[#1f3b73]" />
+                      {f.returnArrivalTime}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Return Duration: {f.returnDuration || "N/A"} • {f.returnStops || "Direct"}
+                    </p>
+                  </div>
+                )}
               </div>
 
-              
               <div className="flex flex-col items-center sm:items-end sm:w-1/3">
                 <div className="text-[#0a2540] font-bold text-xl mb-2 flex items-center gap-2">
                   <Wallet className="w-5 h-5 text-[#1f3b73]" />
@@ -260,7 +285,6 @@ export default function FlightsResult({ flights, loading, searchMade }) {
                 </motion.button>
               </div>
 
-          
               <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-[#0a2540]/5 via-transparent to-[#1f3b73]/5 pointer-events-none"></div>
             </motion.div>
           );

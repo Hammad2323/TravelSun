@@ -2,7 +2,7 @@ import fetch from "node-fetch";
 
 export const handler = async (event) => {
   try {
-    const { from, to, date } = event.queryStringParameters;
+    const { from, to, date, returnDate } = event.queryStringParameters;
 
     if (!from || !to || !date) {
       return {
@@ -21,15 +21,18 @@ export const handler = async (event) => {
       };
     }
 
-    const tokenRes = await fetch("https://test.api.amadeus.com/v1/security/oauth2/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        grant_type: "client_credentials",
-        client_id: clientId,
-        client_secret: clientSecret,
-      }),
-    });
+    const tokenRes = await fetch(
+      "https://test.api.amadeus.com/v1/security/oauth2/token",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          grant_type: "client_credentials",
+          client_id: clientId,
+          client_secret: clientSecret,
+        }),
+      }
+    );
 
     const tokenData = await tokenRes.json();
     const accessToken = tokenData.access_token;
@@ -38,7 +41,11 @@ export const handler = async (event) => {
       throw new Error("Failed to get Amadeus access token");
     }
 
-    const url = `https://test.api.amadeus.com/v2/shopping/flight-offers?originLocationCode=${from}&destinationLocationCode=${to}&departureDate=${date}&adults=1&currencyCode=GBP&max=10`;
+    let url = `https://test.api.amadeus.com/v2/shopping/flight-offers?originLocationCode=${from}&destinationLocationCode=${to}&departureDate=${date}&adults=1&currencyCode=GBP&max=10`;
+
+    if (returnDate) {
+      url += `&returnDate=${returnDate}`;
+    }
 
     const flightRes = await fetch(url, {
       headers: { Authorization: `Bearer ${accessToken}` },
@@ -82,16 +89,43 @@ export const handler = async (event) => {
     };
 
     const flights = data.data.map((offer) => {
-      const itinerary = offer.itineraries?.[0];
-      const segments = itinerary?.segments || [];
+      const outbound = offer.itineraries?.[0];
+      const inbound = offer.itineraries?.[1];
+
+      
+      const segments = outbound?.segments || [];
       const firstSeg = segments[0];
       const lastSeg = segments[segments.length - 1];
 
-      const airlineCode = firstSeg?.carrierCode || "??";
-      const airline = `${airlineNames[airlineCode] || "Unknown Airline"} (${airlineCode})`;
-
       const departureTime = formatTime(firstSeg?.departure?.at);
       const arrivalTime = formatTime(lastSeg?.arrival?.at);
+
+      const stops = segments.length > 1 ? `${segments.length - 1} stop(s)` : "Direct";
+
+      
+      const allOutboundCodes = [...new Set(segments.map((seg) => seg.carrierCode))];
+      const airline = allOutboundCodes
+        .map((code) => `${airlineNames[code] || "Unknown Airline"} (${code})`)
+        .join(" + ");
+
+  
+      let returnDepartureTime, returnArrivalTime, returnDuration, returnStops, returnAirline;
+      if (inbound) {
+        const inboundSegments = inbound.segments;
+        const inboundFirst = inboundSegments[0];
+        const inboundLast = inboundSegments[inboundSegments.length - 1];
+
+        returnDepartureTime = formatTime(inboundFirst?.departure?.at);
+        returnArrivalTime = formatTime(inboundLast?.arrival?.at);
+        returnDuration = inbound.duration?.replace("PT", "").toLowerCase();
+        returnStops =
+          inboundSegments.length > 1 ? `${inboundSegments.length - 1} stop(s)` : "Direct";
+
+        const returnCodes = [...new Set(inboundSegments.map((seg) => seg.carrierCode))];
+        returnAirline = returnCodes
+          .map((code) => `${airlineNames[code] || "Unknown Airline"} (${code})`)
+          .join(" + ");
+      }
 
       return {
         airline,
@@ -99,9 +133,14 @@ export const handler = async (event) => {
         to: lastSeg?.arrival?.iataCode || to,
         departureTime,
         arrivalTime,
-        duration: itinerary?.duration?.replace("PT", "").toLowerCase() || "N/A",
-        stops: segments.length > 1 ? `${segments.length - 1} stop(s)` : "Direct",
+        duration: outbound?.duration?.replace("PT", "").toLowerCase() || "N/A",
+        stops,
         price: `£${offer?.price?.grandTotal || "N/A"}`,
+        returnDepartureTime,
+        returnArrivalTime,
+        returnDuration,
+        returnStops,
+        returnAirline, 
       };
     });
 

@@ -113,6 +113,7 @@ export default function FlightSearchForm() {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [date, setDate] = useState("");
+  const [returnDate, setReturnDate] = useState(""); 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [flights, setFlights] = useState([]);
@@ -135,15 +136,16 @@ export default function FlightSearchForm() {
     e.preventDefault();
     setError("");
     if (!from || !to || !date) {
-      setError("Please fill all fields.");
+      setError("Please fill all required fields.");
       return;
     }
     setSearchMade(true);
     try {
       setLoading(true);
-      const response = await fetch(
-        `/.netlify/functions/getFlights?from=${from}&to=${to}&date=${date}`
-      );
+      const url = returnDate
+        ? `/.netlify/functions/getFlights?from=${from}&to=${to}&date=${date}&returnDate=${returnDate}`
+        : `/.netlify/functions/getFlights?from=${from}&to=${to}&date=${date}`;
+      const response = await fetch(url);
       if (!response.ok) throw new Error("Failed to fetch flights");
       const data = await response.json();
       const flightsArray =
@@ -170,9 +172,9 @@ export default function FlightSearchForm() {
 
       <form
         onSubmit={handleSearch}
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4"
       >
-  
+    
         <div className="relative">
           <label className="text-sm text-gray-600 mb-1 block">From</label>
           <input
@@ -248,13 +250,24 @@ export default function FlightSearchForm() {
           )}
         </div>
 
-    
+      
         <div className="flex flex-col">
           <label className="text-sm text-gray-600 mb-1">Departure Date</label>
           <input
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
+            className="border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-[#0a2540] outline-none bg-white/80"
+          />
+        </div>
+
+    
+        <div className="flex flex-col">
+          <label className="text-sm text-gray-600 mb-1">Return Date (Optional)</label>
+          <input
+            type="date"
+            value={returnDate}
+            onChange={(e) => setReturnDate(e.target.value)}
             className="border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-[#0a2540] outline-none bg-white/80"
           />
         </div>

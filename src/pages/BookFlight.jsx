@@ -3,7 +3,7 @@ import { useState } from "react";
 import emailjs from "emailjs-com";
 import html2canvas from "html2canvas";
 import { motion } from "framer-motion";
-import { CheckCircle, PlaneTakeoff, PlaneLanding, Clock4, Wallet } from "lucide-react";
+import { CheckCircle, PlaneTakeoff, PlaneLanding, Clock4, Wallet, RefreshCw } from "lucide-react";
 
 export default function BookFlight() {
   const location = useLocation();
@@ -35,23 +35,41 @@ export default function BookFlight() {
 🕓 Arrival: ${flight.arrivalTime || "--"}
 ⏱ Duration: ${flight.duration || "N/A"}
 💷 Price: £${flight.price || "N/A"}
+${flight.returnDepartureTime ? `
+--- Return Flight Details ---
+🛫 Airline: ${flight.returnAirline || flight.airline || "Unknown"}
+🌍 Route: ${flight.to} → ${flight.from}
+⏰ Departure: ${flight.returnDepartureTime || "--"}
+🕓 Arrival: ${flight.returnArrivalTime || "--"}
+⏱ Duration: ${flight.returnDuration || "N/A"}
+` : ""}
 `;
 
     try {
+      const emailData = {
+        from_name: formData.fullName,
+        contact_number: formData.contact,
+        city_name: formData.city,
+        airline: flight.airline,
+        route: `${flight.from} → ${flight.to}`,
+        departure: flight.departureTime,
+        arrival: flight.arrivalTime,
+        duration: flight.duration,
+        price: `£${flight.price}`,
+      };
+
+      if (flight.returnDepartureTime) {
+        emailData.return_airline = flight.returnAirline || flight.airline;
+        emailData.return_route = `${flight.to} → ${flight.from}`;
+        emailData.return_departure = flight.returnDepartureTime;
+        emailData.return_arrival = flight.returnArrivalTime;
+        emailData.return_duration = flight.returnDuration;
+      }
+
       await emailjs.send(
         "service_sypybsn",
         "template_2ct7z4k",
-        {
-          from_name: formData.fullName,
-          contact_number: formData.contact,
-          city_name: formData.city,
-          airline: flight.airline,
-          route: `${flight.from} → ${flight.to}`,
-          departure: flight.departureTime,
-          arrival: flight.arrivalTime,
-          duration: flight.duration,
-          price: `£${flight.price}`,
-        },
+        emailData,
         "_D--vHi3PuyyjzodL"
       );
 
@@ -67,13 +85,11 @@ export default function BookFlight() {
     }
   };
 
-  
   const handleDownload = async () => {
     const element = document.getElementById("booking-summary");
     if (!element) return alert("Booking summary not found!");
 
     try {
-      
       const clone = element.cloneNode(true);
       clone.style.position = "absolute";
       clone.style.left = "-9999px";
@@ -83,7 +99,6 @@ export default function BookFlight() {
       clone.style.backdropFilter = "none";
       document.body.appendChild(clone);
 
-    
       const fixColors = (el) => {
         const computed = window.getComputedStyle(el);
         const cssProps = [
@@ -106,7 +121,6 @@ export default function BookFlight() {
       clone.querySelectorAll("*").forEach(fixColors);
       fixColors(clone);
 
-      
       await new Promise((r) => setTimeout(r, 150));
 
       const canvas = await html2canvas(clone, {
@@ -119,7 +133,6 @@ export default function BookFlight() {
 
       document.body.removeChild(clone);
 
-      
       canvas.toBlob((blob) => {
         if (!blob) return alert("Failed to create image!");
         const link = document.createElement("a");
@@ -152,24 +165,46 @@ export default function BookFlight() {
             Thank you. We’ll contact you soon to confirm your booking.
           </p>
 
+          
           <div
             id="booking-summary"
-            className="bg-white/70 border border-navy-100 rounded-2xl p-6 text-left shadow-sm"
+            className="bg-white p-6 rounded-2xl shadow-lg max-w-md mx-auto text-left"
+            style={{ fontFamily: "'Segoe UI', sans-serif", lineHeight: 1.5 }}
           >
-            <h3 className="font-semibold text-lg text-[#0a1f44] mb-3">
-              Booking Summary
-            </h3>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-gray-700 text-sm sm:text-base">
-              <p><strong>Name:</strong> {formData.fullName}</p>
-              <p><strong>Contact:</strong> {formData.contact}</p>
-              <p><strong>City:</strong> {formData.city}</p>
-              <p><strong>Airline:</strong> {flight.airline}</p>
-              <p><strong>Route:</strong> {flight.from} → {flight.to}</p>
-              <p><strong>Departure:</strong> {flight.departureTime}</p>
-              <p><strong>Arrival:</strong> {flight.arrivalTime}</p>
-              <p><strong>Duration:</strong> {flight.duration}</p>
-              <p><strong>Price:</strong> £{flight.price}</p>
+            <h2 className="text-center text-indigo-600 font-bold text-xl mb-4">
+              ✈️ TravelSun Flight Booking Request
+            </h2>
+
+            <div className="mb-4">
+              <p><span className="font-semibold text-gray-700">👤 Name:</span> <span className="text-gray-600">{formData.fullName}</span></p>
+              <p><span className="font-semibold text-gray-700">📞 Contact:</span> <span className="text-gray-600">{formData.contact}</span></p>
+              <p><span className="font-semibold text-gray-700">🏙️ City:</span> <span className="text-gray-600">{formData.city}</span></p>
             </div>
+
+            <div className="border-t border-gray-200 pt-3 mb-3">
+              <h3 className="text-indigo-600 font-semibold mb-2">Flight Details</h3>
+              <p><span className="font-semibold text-gray-700">🛫 Airline:</span> <span className="text-gray-600">{flight.airline}</span></p>
+              <p><span className="font-semibold text-gray-700">🌍 Route:</span> <span className="text-gray-600">{flight.from} → {flight.to}</span></p>
+              <p><span className="font-semibold text-gray-700">⏰ Departure:</span> <span className="text-gray-600">{flight.departureTime}</span></p>
+              <p><span className="font-semibold text-gray-700">🕓 Arrival:</span> <span className="text-gray-600">{flight.arrivalTime}</span></p>
+              <p><span className="font-semibold text-gray-700">⏱ Duration:</span> <span className="text-gray-600">{flight.duration}</span></p>
+              <p><span className="font-semibold text-indigo-600">💷 Price:</span> <span className="text-indigo-600 font-bold">£{flight.price}</span></p>
+            </div>
+
+            {flight.returnDepartureTime && (
+              <div className="border-t border-gray-200 pt-3">
+                <h3 className="text-indigo-600 font-semibold mb-2">Return Flight Details</h3>
+                <p><span className="font-semibold text-gray-700">🛫 Airline:</span> <span className="text-gray-600">{flight.returnAirline || flight.airline}</span></p>
+                <p><span className="font-semibold text-gray-700">🌍 Route:</span> <span className="text-gray-600">{flight.to} → {flight.from}</span></p>
+                <p><span className="font-semibold text-gray-700">⏰ Departure:</span> <span className="text-gray-600">{flight.returnDepartureTime}</span></p>
+                <p><span className="font-semibold text-gray-700">🕓 Arrival:</span> <span className="text-gray-600">{flight.returnArrivalTime}</span></p>
+                <p><span className="font-semibold text-gray-700">⏱ Duration:</span> <span className="text-gray-600">{flight.returnDuration}</span></p>
+              </div>
+            )}
+
+            <p className="text-center text-gray-400 text-sm mt-4">
+              ✈️ TravelSun Flight Booking System – Thank you for choosing us!
+            </p>
           </div>
 
           <button
@@ -226,7 +261,30 @@ export default function BookFlight() {
               <span>{flight.duration}</span>
             </div>
 
-            <div className="flex justify-between">
+            {flight.returnDepartureTime && (
+              <>
+                <div className="flex justify-between mt-2 border-t border-gray-200 pt-2">
+                  <span className="font-medium flex items-center gap-1">
+                    <RefreshCw className="w-4 h-4 text-[#0a1f44]" /> Return Departure:
+                  </span>
+                  <span>{flight.to} – {flight.returnDepartureTime}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium flex items-center gap-1">
+                    <PlaneLanding className="w-4 h-4 text-[#0a1f44]" /> Return Arrival:
+                  </span>
+                  <span>{flight.from} – {flight.returnArrivalTime}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium flex items-center gap-1">
+                    <Clock4 className="w-4 h-4 text-[#0a1f44]" /> Return Duration:
+                  </span>
+                  <span>{flight.returnDuration}</span>
+                </div>
+              </>
+            )}
+
+            <div className="flex justify-between mt-2">
               <span className="font-medium flex items-center gap-1">
                 <Wallet className="w-4 h-4 text-[#0a1f44]" /> Price:
               </span>
